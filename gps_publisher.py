@@ -82,9 +82,9 @@ try:
             prev_lon_str = None
 
         if fix_latched:
-            lat_str = f"{lat:.5f}"
-            lon_str = f"{lon:.5f}"
-            message = f"{lat:.6f},{lon:.6f}"
+            lat_str = f"{lat:.4f}"
+            lon_str = f"{lon:.4f}"
+            message = f"{lat:.8f},{lon:.8f}"
             if (lat != 0 and lat_str != prev_lat_str) or (lon != 0 and lon_str != prev_lon_str):
                 with canvas(device) as draw:
                     # Publish to the drone
@@ -95,7 +95,6 @@ try:
                     draw.text(xy=(0, 0), text="GPS: FIX", font=font16, fill=255)
                     draw.line(xy=(0, 16, device.width - 1, 16), fill=255)
                     draw.text(xy=(0, 24), text=f"Lat: {lat_str}", font=font16, fill=255)
-                    draw.line(xy=(0, 40, device.width - 1, 40), fill=255)
                     draw.text(xy=(0, 48), text=f"Lon: {lon_str}", font=font16, fill=255)
 
                 prev_lat_str = lat_str

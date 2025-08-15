@@ -59,8 +59,8 @@ try:
             prev_lon_str = None
 
         if fix_latched:
-            lat_str = f"{lat:.5f}"
-            lon_str = f"{lon:.5f}"
+            lat_str = f"{lat:.4f}"
+            lon_str = f"{lon:.4f}"
             if (lat != 0 and lat_str != prev_lat_str) or (lon != 0 and lon_str != prev_lon_str):
                 with canvas(device) as draw:
                     draw.text(xy=(0, 0), text="GPS: FIX", font=font16, fill=255)

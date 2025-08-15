@@ -1,5 +1,11 @@
-# gps_parser.py - A simple library for parsing NMEA GPS data
-# For use with UART GPS modules on Raspberry Pi Pico
+"""
+### A simple library for parsing NMEA GPS data.
+For use with UART GPS modules on Raspberry Pi 4B.
+"""
+
+# TODO: 
+# 1. update the GPSData class to be a dataclass
+# 2. apply type hints
 
 import time
 
