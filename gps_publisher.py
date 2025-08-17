@@ -16,6 +16,13 @@ import paho.mqtt.publish as publish
 
 
 
+"""
+TODO:
+1. CREATE A OLED MODULE/CLASS LIKE THE GPS PARSER
+"""
+
+
+
 # This is the RPi5's (drone's) IP address when on Solis
 BROKER_IP = "192.168.43.102"
 TOPIC = "vertiport/gps"
