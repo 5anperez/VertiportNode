@@ -1,7 +1,7 @@
 import serial
 from MB_init import MB_GPSReader
 import time
-
+import traceback
 
 
 """
@@ -87,6 +87,17 @@ OLED_ADDR = 0x3C  # Default I2C address for SSD1306
 UPDATE_INTERVAL = 1.0  # seconds between GPS reads
 COORDINATE_PRECISION = 4  # decimal places for coordinates
 
+DEBUG = True
+
+
+def with_checksum(payload: str) -> str:
+    # payload example: "$GPRMC,...."
+    data = payload[1:]  # drop leading $
+    cs = 0
+    for ch in data:
+        cs ^= ord(ch)
+    return f"{payload}*{cs:02X}"
+
 
 
 class GPSDisplay:
@@ -123,8 +134,12 @@ class GPSDisplay:
         # Initialize serial port for GPS
         print("Initializing GPS...")
         try:
-            self.serial = serial.Serial('/dev/serial0', 9600, timeout=1)
-            self.gps = MB_GPSReader(self.serial)
+            if DEBUG:
+                print("DEBUG MODE")
+                self.gps = MB_GPSReader(None)
+            else:
+                self.serial = serial.Serial('/dev/serial0', 9600, timeout=1)
+                self.gps = MB_GPSReader(self.serial)
         except Exception as e:
             print(f"Error initializing GPS: {e}")
             raise
@@ -231,6 +246,9 @@ class GPSDisplay:
         gps_data.last_valid_lon = gps_data.longitude
         
         print(f"Display updated: {fix_text} | LAT: {gps_data.latitude:.{COORDINATE_PRECISION}f} | LON: {gps_data.longitude:.{COORDINATE_PRECISION}f}")
+        
+        
+    
     
 
 
@@ -239,25 +257,55 @@ class GPSDisplay:
         print("Starting GPS display loop...")
         print("Waiting for GPS fix with non-zero coordinates...")
         
-        try:
-            while True:
-                # Read and parse GPS data
-                gps_data = self.gps.read_and_parse(timeout=UPDATE_INTERVAL)
-                
-                # Update display if we have valid data
-                self.display_gps_data(gps_data)
-                print(self.gps.get_summary())
-                
-                # Small delay to prevent CPU overload
-                time.sleep(0.1)
-                
-        except KeyboardInterrupt:
-            print("\nShutting down GPS display...")
-            self.cleanup()
-        except Exception as e:
-            print(f"Error in main loop: {e}")
-            self.cleanup()
-            raise
+        if DEBUG:
+            print("ENTERING DEBUG MODE")
+            # 1) RMC invalid -> GLL should fill
+            self.gps._parse_nmea_sentence(with_checksum("$GPRMC,123519,V,,,,,,,230394,,,A"))
+            self.gps._parse_nmea_sentence(with_checksum("$GPGLL,4916.45,N,12311.12,W,123520,A,A"))
+            print(f"Status: {self.gps.gps_data.status}")
+            print(f"Latitude: {self.gps.gps_data.latitude}")
+            assert self.gps.gps_data.status == 'A'
+            assert self.gps.gps_data.latitude is not None
+            print(f"DEBUG MODE 1 COMPLETE")
+            print("DEBUG MODE 1 COMPLETE")
+
+            # 2) RMC valid -> GLL 'V' must NOT demote
+            # reader = MA_GPSReader(None)
+            self.gps._parse_nmea_sentence(with_checksum("$GPRMC,123519,A,4916.45,N,12311.12,W,0.5,054.7,230394,,,A"))
+            lat_before = self.gps.gps_data.latitude
+            self.gps._parse_nmea_sentence(with_checksum("$GPGLL,4916.45,N,12311.12,W,123521,V,A"))
+            print(f"Status: {self.gps.gps_data.status}")
+            assert self.gps.gps_data.status == 'A'
+            assert self.gps.gps_data.latitude == lat_before
+            print("DEBUG MODE 2 COMPLETE")
+            # 3) Only GLL valid -> should populate
+            # reader = MA_GPSReader(None)
+            self.gps._parse_nmea_sentence(with_checksum("$GPRMC,123519,V,,,,,,,230394,,,A"))
+            assert self.gps.gps_data.is_valid() == False
+            self.gps._parse_nmea_sentence(with_checksum("$GPGLL,4916.45,N,12311.12,W,123520,A,A"))
+            assert self.gps.gps_data.is_valid()
+            print("DEBUG MODE COMPLETE")
+            return
+        else:
+            try:
+                while True:
+                    # Read and parse GPS data
+                    gps_data = self.gps.read_and_parse(timeout=UPDATE_INTERVAL)
+                    
+                    # Update display if we have valid data
+                    self.display_gps_data(gps_data)
+                    print(self.gps.get_summary())
+                    
+                    # Small delay to prevent CPU overload
+                    time.sleep(0.1)
+                    
+            except KeyboardInterrupt:
+                print("\nShutting down GPS display...")
+                self.cleanup()
+            except Exception as e:
+                print(f"Error in main loop: {e}")
+                self.cleanup()
+                raise
     
 
     
@@ -287,6 +335,7 @@ def main():
         display.run()
     except Exception as e:
         print(f"Fatal error: {e}")
+        traceback.print_exc()
         return 1
     
     return 0

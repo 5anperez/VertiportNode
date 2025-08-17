@@ -235,7 +235,8 @@ def with_checksum(payload: str) -> str:
     return f"{payload}*{cs:02X}"
 
 
-DEBUG = True
+# DEBUG = True
+DEBUG = False
 
 def main():
     """Main function to run GPS OLED display"""
@@ -282,6 +283,7 @@ def main():
         reader._parse_nmea_sentence(with_checksum("$GPRMC,123519,A,4916.45,N,12311.12,W,0.5,054.7,230394,,,A"))
         lat_before = reader.gps_data.latitude
         reader._parse_nmea_sentence(with_checksum("$GPGLL,4916.45,N,12311.12,W,123521,V,A"))
+        print(f"Status: {reader.gps_data.status}")
         assert reader.gps_data.status == 'A'
         assert reader.gps_data.latitude == lat_before
 
