@@ -218,7 +218,7 @@ class GPSOLEDDisplay:
         self.last_status = status_text
         
 
-        
+
     def clear(self):
         """Clear the display"""
         self.display.fill(0)
@@ -226,26 +226,37 @@ class GPSOLEDDisplay:
 
 
 
+def with_checksum(payload: str) -> str:
+    # payload example: "$GPRMC,...."
+    data = payload[1:]  # drop leading $
+    cs = 0
+    for ch in data:
+        cs ^= ord(ch)
+    return f"{payload}*{cs:02X}"
 
 
-
-
+DEBUG = True
 
 def main():
     """Main function to run GPS OLED display"""
-    print("Starting GPS OLED Display...")
-    
-    # Initialize display
-    oled = GPSOLEDDisplay()
-    oled.display_startup()
-    time.sleep(2)
     
     # Initialize GPS serial connection
     try:
-        # RPi hardware UART
-        gps_serial = serial.Serial('/dev/serial0', 9600, timeout=1)
-        gps_reader = MA_GPSReader(gps_serial)
-        print("GPS serial connection established")
+        if DEBUG:
+            print("DEBUG MODE")
+            reader = MA_GPSReader(serial_port=None)  # you won’t use serial in this test
+        else:
+            print("Starting GPS OLED Display...")
+    
+            # Initialize display
+            oled = GPSOLEDDisplay()
+            oled.display_startup()
+            time.sleep(2)
+
+            # RPi hardware UART
+            gps_serial = serial.Serial('/dev/serial0', 9600, timeout=1)
+            gps_reader = MA_GPSReader(gps_serial)
+            print("GPS serial connection established")
     except Exception as e:
         print(f"Error opening GPS serial port: {e}")
         oled.draw.rectangle((0, 0, oled.width, oled.height), outline=0, fill=0)
@@ -253,32 +264,62 @@ def main():
         oled.display.image(oled.image)
         oled.display.show()
         return
-        
-    # Show waiting message
-    oled.display_waiting()
     
-    # Main loop
-    try:
-        while True:
-            # Read and parse GPS data
-            gps_data = gps_reader.read_and_parse(timeout=1.0)
-            
-            # Display data if valid
-            if gps_data.is_valid():
-                oled.display_gps_data(gps_data)
-                print(gps_reader.get_summary())
-            
-            # Small delay to prevent CPU overuse
-            time.sleep(0.1)
-            
-    except KeyboardInterrupt:
-        print("\nShutting down GPS OLED Display...")
-        oled.clear()
-        gps_serial.close()
+    
+
+    
+    
+
+    if DEBUG:
+        # 1) RMC invalid -> GLL should fill
+        reader._parse_nmea_sentence(with_checksum("$GPRMC,123519,V,,,,,,,230394,,,A"))
+        reader._parse_nmea_sentence(with_checksum("$GPGLL,4916.45,N,12311.12,W,123520,A,A"))
+        assert reader.gps_data.status == 'A'
+        assert reader.gps_data.latitude is not None
+
+        # 2) RMC valid -> GLL 'V' must NOT demote
+        # reader = MA_GPSReader(None)
+        reader._parse_nmea_sentence(with_checksum("$GPRMC,123519,A,4916.45,N,12311.12,W,0.5,054.7,230394,,,A"))
+        lat_before = reader.gps_data.latitude
+        reader._parse_nmea_sentence(with_checksum("$GPGLL,4916.45,N,12311.12,W,123521,V,A"))
+        assert reader.gps_data.status == 'A'
+        assert reader.gps_data.latitude == lat_before
+
+        # 3) Only GLL valid -> should populate
+        # reader = MA_GPSReader(None)
+        reader._parse_nmea_sentence(with_checksum("$GPRMC,123519,V,,,,,,,230394,,,A"))
+        assert reader.gps_data.is_valid() == False
+        reader._parse_nmea_sentence(with_checksum("$GPGLL,4916.45,N,12311.12,W,123520,A,A"))
+        assert reader.gps_data.is_valid()
+        print("DEBUG MODE COMPLETE")
+
+        return
+    else:
+        # Show waiting message
+        oled.display_waiting()
         
-    except Exception as e:
-        print(f"Error in main loop: {e}")
-        oled.clear()
+        # Main loop
+        try:
+            while True:
+                # Read and parse GPS data
+                gps_data = gps_reader.read_and_parse(timeout=1.0)
+                
+                # Display data if valid
+                if gps_data.is_valid():
+                    oled.display_gps_data(gps_data)
+                    print(gps_reader.get_summary())
+                
+                # Small delay to prevent CPU overuse
+                time.sleep(0.1)
+                
+        except KeyboardInterrupt:
+            print("\nShutting down GPS OLED Display...")
+            oled.clear()
+            gps_serial.close()
+            
+        except Exception as e:
+            print(f"Error in main loop: {e}")
+            oled.clear()
         
 
 if __name__ == "__main__":
