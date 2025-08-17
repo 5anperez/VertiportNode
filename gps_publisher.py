@@ -19,6 +19,7 @@ import paho.mqtt.publish as publish
 """
 TODO:
 1. CREATE A OLED MODULE/CLASS LIKE THE GPS PARSER
+2. ADD THE LAT/LON DIRECTIONS EG N/S/E/W
 """
 
 
@@ -40,6 +41,7 @@ font16 = ImageFont.truetype(
 )
 
 # Shared state between worker and UI
+# NOTE: Add more attributes here if you want to access/print them.
 lock = threading.Lock()
 shared = {
     "has_fix": False,
@@ -89,8 +91,9 @@ try:
             prev_lon_str = None
 
         if fix_latched:
-            lat_str = f"{lat:.4f}"
-            lon_str = f"{lon:.4f}"
+            # NOTE: IS THE DEGREE SIGN APPROPRIATE HERE?
+            lat_str = f"{lat:.4f}°"
+            lon_str = f"{lon:.4f}°"
             message = f"{lat:.8f},{lon:.8f}"
             if (lat != 0 and lat_str != prev_lat_str) or (lon != 0 and lon_str != prev_lon_str):
                 with canvas(device) as draw:
