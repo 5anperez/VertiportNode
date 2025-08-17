@@ -266,6 +266,7 @@ def main():
             # Display data if valid
             if gps_data.is_valid():
                 oled.display_gps_data(gps_data)
+                print(gps_reader.get_summary())
             
             # Small delay to prevent CPU overuse
             time.sleep(0.1)

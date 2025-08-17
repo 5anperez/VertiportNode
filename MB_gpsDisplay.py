@@ -246,6 +246,7 @@ class GPSDisplay:
                 
                 # Update display if we have valid data
                 self.display_gps_data(gps_data)
+                print(self.gps.get_summary())
                 
                 # Small delay to prevent CPU overload
                 time.sleep(0.1)

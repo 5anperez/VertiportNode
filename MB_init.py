@@ -103,7 +103,7 @@ class GPSData:
         return lat_change > threshold or lon_change > threshold
 
 
-class GPSReader:
+class MB_GPSReader:
     """
     GPS Reader class for parsing NMEA sentences from SAM-M8Q module
     """
@@ -123,6 +123,8 @@ class GPSReader:
         # US Central Time offset (adjust for DST as needed)
         # CST = UTC-6, CDT = UTC-5
         self.utc_offset_hours = -6  # Change to -5 for daylight saving time
+        
+        
         
     def read_and_parse(self, timeout: float = 1.0) -> GPSData:
         """
@@ -158,6 +160,8 @@ class GPSReader:
                 time.sleep(0.01)  # Small delay to prevent CPU spinning
                 
         return self.gps_data
+    
+    
     
     def _parse_nmea_sentence(self, sentence: str) -> None:
         """
