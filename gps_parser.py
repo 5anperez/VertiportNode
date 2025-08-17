@@ -6,6 +6,10 @@ For use with UART GPS modules on Raspberry Pi 4B.
 # TODO: 
 # 1. update the GPSData class to be a dataclass
 # 2. apply type hints
+# 3. omit the "backwards compatibility" functionality, e.g., parse_gps_data(), since its not used anywhere!
+# 4. add a method to get the GPS data as a dictionary
+
+# NOTE: SHOULDNT THE GPSDATA ALSO HAVE A HASNEWDATA MEMBER LIKE GPSREADER HAS SO THAT WE DONT HAVE TO CALL UPDATE EVERY TIME? IF SO, THEN SHOULDNT UPDATE BE PRIVATE?
 
 import time
 
