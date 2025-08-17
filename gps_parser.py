@@ -8,6 +8,8 @@ For use with UART GPS modules on Raspberry Pi 4B.
 # 2. apply type hints
 # 3. omit the "backwards compatibility" functionality, e.g., parse_gps_data(), since its not used anywhere!
 # 4. add a method to get the GPS data as a dictionary
+# 5. finish the gps summary method
+# 6. fix the time calculation
 
 # NOTE: SHOULDNT THE GPSDATA ALSO HAVE A HASNEWDATA MEMBER LIKE GPSREADER HAS SO THAT WE DONT HAVE TO CALL UPDATE EVERY TIME? IF SO, THEN SHOULDNT UPDATE BE PRIVATE?
 
@@ -40,6 +42,28 @@ class GPSReader:
         self.current_data = GPSData()
         self.has_new_data = False
     # __init__
+    
+    
+    
+    def get_summary(self) -> str:
+        """
+        Get a human-readable summary of current GPS status
+        
+        Returns:
+            Multi-line string with GPS information
+        """
+        lines = [
+            "GPS Status Summary",
+            "-" * 20,
+            f"Status: {self.current_data.get_status_string()}",
+            f"Position: {self.current_data.get_position_string()}",
+            f"Altitude: {self.current_data.altitude:.1f}m" if self.current_data.altitude else "Altitude: N/A",
+            f"Time: {self.current_data.get_time_string()}",
+            f"Speed: {self.current_data.speed_kmh:.1f} km/h" if self.current_data.speed_kmh else "Speed: N/A",
+            f"HDOP: {self.current_data.hdop:.1f}" if self.current_data.hdop else "HDOP: N/A",
+        ]
+        return "\n".join(lines)
+    # get_summary
         
         
         

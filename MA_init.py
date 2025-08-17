@@ -81,7 +81,7 @@ class GPSData:
                 self.longitude is not None)
 
 
-class GPSReader:
+class MA_GPSReader:
     """
     GPS Reader class for parsing NMEA sentences from SAM-M8Q module
     """
@@ -433,22 +433,6 @@ class GPSReader:
 
 
 
-# EXAMPLE USAGE:
-# This would be in your main GPS node script
-import serial
-from gpsParser import GPSReader
-
-# Initialize serial port
-ser = serial.Serial('/dev/serial0', 9600, timeout=1)
-
-# Create GPS reader
-gps = GPSReader(ser)
-
-# Read and parse GPS data
-while True:
-    gps_data = gps.read_and_parse()
-    print(gps.get_summary())
-    time.sleep(1)
 
 
 

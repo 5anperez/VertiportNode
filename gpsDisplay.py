@@ -6,10 +6,14 @@ from luma.core.interface.serial import i2c
 from luma.oled.device import ssd1306
 from luma.core.render import canvas
 from PIL import ImageFont
+from MA_init import MA_GPSReader
+
 
 # Init GPS
 ser = serial.Serial('/dev/serial0', 9600, timeout=0)
 gps = GPSReader(ser)
+
+MA_gps = MA_GPSReader(ser)
 
 # Init OLED (change address if your scan shows different)
 serial_i2c = i2c(port=1, address=0x3C)
@@ -24,6 +28,9 @@ shared = {
     "lat": 0.0,
     "lon": 0.0,
     "sats": 0,
+    "hdop": 0.0,
+    "time": "",
+    "date": "",
 }
 
 stop_event = threading.Event()
@@ -36,6 +43,9 @@ def gps_worker() -> None:
             shared["lat"] = d.latitude
             shared["lon"] = d.longitude
             shared["sats"] = d.satellites
+            shared["hdop"] = d.hdop
+            shared["time"] = d.time
+            shared["date"] = d.date
         time.sleep(0.05)
 
 threading.Thread(target=gps_worker, daemon=True).start()
@@ -51,7 +61,8 @@ try:
             lat = shared["lat"]
             lon = shared["lon"]
             print(f"fix = {has_fix} sats = {shared['sats']}")
-            print(f"lat = {lat} lon = {lon}")
+            print(f"lat = {lat} lon = {lon} hdop = {shared['hdop']}")
+            print(f"time = {shared['time']} date = {shared['date']}")
 
         if not fix_latched and has_fix:
             fix_latched = True

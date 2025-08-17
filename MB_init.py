@@ -81,7 +81,7 @@ class GPSData:
         return f"{abs(self.latitude):.6f}°{lat_dir}, {abs(self.longitude):.6f}°{lon_dir}"
 
 
-class GPSReader:
+class MB_GPSReader:
     """
     Reads and parses NMEA sentences from a GPS module connected via serial/UART.
     """
@@ -413,6 +413,7 @@ class GPSReader:
         Returns:
             Current GPSData object
         """
+        self.update()
         return self.gps_data
     
     def has_fix(self) -> bool:
