@@ -163,7 +163,64 @@ class GPSOLEDDisplay:
         self.display.show()
         
 
+    # # OLD:
+    # def display_gps_data(self, gps_data):
+    #     """
+    #     Display GPS data on OLED
+    #     Only updates if position has changed
+        
+    #     Args:
+    #         gps_data: GPSData object from gpsParser
+    #     """
+    #     # Check if we have valid non-zero coordinates
+    #     if not gps_data.is_valid():
+    #         return
+            
+    #     # Check if position has changed
+    #     if (self.last_lat == gps_data.latitude and 
+    #         self.last_lon == gps_data.longitude and
+    #         self.last_status == gps_data.get_status_string()):
+    #         return
+            
+    #     # Clear image
+    #     self.draw.rectangle((0, 0, self.width, self.height), outline=0, fill=0)
+        
+    #     # Line 1: GPS Status (in yellow area - top 16 pixels)
+    #     status_text = gps_data.get_status_string()
+    #     # Center the status text
+    #     bbox = self.draw.textbbox((0, 0), status_text, font=self.font_large)
+    #     text_width = bbox[2] - bbox[0]
+    #     x_pos = (self.width - text_width) // 2
+    #     self.draw.text((x_pos, 0), status_text, font=self.font_large, fill=255)
+        
+    #     # Underline
+    #     self.draw.line((10, 18, self.width - 10, 18), fill=255, width=1)
+        
+    #     # Blank line (pixels 19-28)
+        
+    #     # Line 2: Latitude (pixels 29-44)
+    #     lat_text = f"LAT: {gps_data.latitude:.4f}"
+    #     self.draw.text((5, 29), lat_text, font=self.font_large, fill=255)
+        
+    #     # Blank line (pixels 45-48)
+        
+    #     # Line 3: Longitude (pixels 49-64)
+    #     lon_text = f"LON: {gps_data.longitude:.4f}"
+    #     self.draw.text((5, 49), lon_text, font=self.font_large, fill=255)
+        
+    #     # Update display
+    #     self.display.image(self.image)
+    #     self.display.show()
+        
+    #     # Update last displayed values
+    #     self.last_lat = gps_data.latitude
+    #     self.last_lon = gps_data.longitude
+    #     self.last_status = status_text
 
+
+
+
+    # NEW:
     def display_gps_data(self, gps_data):
         """
         Display GPS data on OLED
@@ -176,17 +233,22 @@ class GPSOLEDDisplay:
         if not gps_data.is_valid():
             return
             
+        # Format the status text without satellite count
+        if gps_data.fix_type:
+            status_text = f"{gps_data.fix_type} Fix"
+        else:
+            status_text = "GPS Fix"
+            
         # Check if position has changed
         if (self.last_lat == gps_data.latitude and 
             self.last_lon == gps_data.longitude and
-            self.last_status == gps_data.get_status_string()):
+            self.last_status == status_text):
             return
             
         # Clear image
         self.draw.rectangle((0, 0, self.width, self.height), outline=0, fill=0)
         
         # Line 1: GPS Status (in yellow area - top 16 pixels)
-        status_text = gps_data.get_status_string()
         # Center the status text
         bbox = self.draw.textbbox((0, 0), status_text, font=self.font_large)
         text_width = bbox[2] - bbox[0]
@@ -199,13 +261,15 @@ class GPSOLEDDisplay:
         # Blank line (pixels 19-28)
         
         # Line 2: Latitude (pixels 29-44)
-        lat_text = f"LAT: {gps_data.latitude:.4f}"
+        lat_dir = 'N' if gps_data.latitude >= 0 else 'S'
+        lat_text = f"LAT: {abs(gps_data.latitude):.2f}°{lat_dir}"
         self.draw.text((5, 29), lat_text, font=self.font_large, fill=255)
         
         # Blank line (pixels 45-48)
         
         # Line 3: Longitude (pixels 49-64)
-        lon_text = f"LON: {gps_data.longitude:.4f}"
+        lon_dir = 'E' if gps_data.longitude >= 0 else 'W'
+        lon_text = f"LON: {abs(gps_data.longitude):.2f}°{lon_dir}"
         self.draw.text((5, 49), lon_text, font=self.font_large, fill=255)
         
         # Update display
@@ -227,6 +291,9 @@ class GPSOLEDDisplay:
 
 
 def with_checksum(payload: str) -> str:
+    """
+    Add checksum to NMEA sentence
+    """
     # payload example: "$GPRMC,...."
     data = payload[1:]  # drop leading $
     cs = 0
@@ -326,6 +393,208 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# # MA TEST CASES BELOW
+# #!/usr/bin/env python3
+# """
+# Test cases for GPS parser redundancy logic
+# Tests fallback to GLL when other sentences are invalid
+# """
+
+# import io
+# from gpsParser import GPSReader, GPSData
+
+
+# class MockSerial:
+#     """Mock serial port for testing"""
+#     def __init__(self, data):
+#         self.data = data
+#         self.position = 0
+        
+#     @property
+#     def in_waiting(self):
+#         return len(self.data) - self.position
+        
+#     def read(self, size):
+#         result = self.data[self.position:self.position + size]
+#         self.position += len(result)
+#         return result
+
+
+# def test_valid_rmc_overrides_gll():
+#     """Test that valid RMC data takes precedence over GLL, i.e., confirm that good RMC values are not overwritten by GLL values"""
+#     '''
+#     NOTE: 
+    
+#     THE RMC SENT. WILL YIELD LAT = 48.1173, AND LON = 11.51666667. 
+    
+#     THE GLL SENT. WILL YIELD LAT = 48.1, AND LON = 11.5
+    
+#     SO WHEN WE TAKE THE DIFFERENCE WE WILL GET 0 < 0.001 = TRUE AND 0 < 0.001 = TRUE IF THE RMC VALUES WERE STORED, AND WE WILL GET 0.0173 < 0.001 = FALSE AND 0.01666667 < 0.001 = FALSE IF THE GLL VALUES WERE STORED. 
+    
+#     HOWEVER, THE GLL SENT. DOES NOT HAVE THE STATUS FIELD, SO IT WOULDNT BE USED ANYWAYS. THEREFORE, THIS MIGHT BE A REDUNDANT TEST.
+#     '''
+#     nmea_data = (
+#         "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A\r\n"
+#         "$GPGLL,4806.000,N,01130.000,E,123520,A*7C\r\n"
+#     ).encode()
+    
+#     serial = MockSerial(nmea_data)
+#     reader = GPSReader(serial)
+#     gps_data = reader.read_and_parse()
+    
+#     # NOTE: THESE VALUES ARE RETURNED BY THE _parse_coordinate METHOD.
+#     print("Test 1: Valid RMC overrides GLL")
+#     print(f"  Expected lat: 48.1173, Got: {gps_data.latitude:.4f}")
+#     print(f"  Expected lon: 11.5167, Got: {gps_data.longitude:.4f}")
+#     assert abs(gps_data.latitude - 48.1173) < 0.001
+#     assert abs(gps_data.longitude - 11.5167) < 0.001
+#     print("  ✓ PASSED\n")
+
+
+# def test_invalid_rmc_uses_gll():
+#     """Test that GLL is used when RMC has invalid status, i.e., confirm that bad RMC values are overwritten by GLL values, which is the fallback."""
+#     '''
+#     NOTE:
+    
+#     THE GLL SENT. WILL YIELD LAT = 48.1173 AND LON = 11.51666667
+    
+#     SO WHEN WE TAKE THE DIFFERENCE WE WILL GET 0 AND 0 IF THE GLL VALUES WERE STORED, WHICH PASSES, AND WE WILL GET 48.1173 AND 11.5167 IF THE RMC VALUES WERE STORED, WHICH FAILS. 
+#     '''
+#     nmea_data = (
+#         "$GPRMC,123519,V,,,,,022.4,084.4,230394,003.1,W*7E\r\n"
+#         "$GPGLL,4807.038,N,01131.000,E,123520,A*7D\r\n"
+#     ).encode()
+    
+#     serial = MockSerial(nmea_data)
+#     reader = GPSReader(serial)
+#     gps_data = reader.read_and_parse()
+    
+#     print("Test 2: Invalid RMC, valid GLL used")
+#     print(f"  Expected lat: 48.1173, Got: {gps_data.latitude:.4f if gps_data.latitude else 'None'}")
+#     print(f"  Expected lon: 11.5167, Got: {gps_data.longitude:.4f if gps_data.longitude else 'None'}")
+#     assert gps_data.latitude is not None
+#     assert gps_data.longitude is not None
+#     assert abs(gps_data.latitude - 48.1173) < 0.001
+#     assert abs(gps_data.longitude - 11.5167) < 0.001
+#     print("  ✓ PASSED\n")
+
+
+# def test_gga_without_position_uses_gll():
+#     """Test that GLL provides position when GGA lacks it, i.e., confirm that bad RMC values are overwritten by GLL values, which is the fallback."""
+#     '''
+#     NOTE:
+    
+#     THE GLL SENT. WILL YIELD LAT = 48.1173 AND LON = 11.51666667
+    
+#     SO WHEN WE TAKE THE DIFFERENCE WE WILL GET 0 AND 0 IF THE GLL VALUES WERE STORED, WHICH PASSES, AND WE WILL GET 48.1173 AND 11.5167 IF THE GGA VALUES WERE STORED, WHICH FAILS. 
+#     '''
+#     nmea_data = (
+#         "$GPGGA,123519,,,,,0,4,0.9,545.4,M,46.9,M,,*40\r\n"
+#         "$GPGLL,4807.038,N,01131.000,E,123520,A*7D\r\n"
+#     ).encode()
+    
+#     serial = MockSerial(nmea_data)
+#     reader = GPSReader(serial)
+#     gps_data = reader.read_and_parse()
+    
+#     print("Test 3: GGA without position, GLL provides backup")
+#     print(f"  Got lat: {gps_data.latitude:.4f if gps_data.latitude else 'None'}")
+#     print(f"  Got lon: {gps_data.longitude:.4f if gps_data.longitude else 'None'}")
+#     assert gps_data.latitude is not None
+#     assert gps_data.longitude is not None
+#     print("  ✓ PASSED\n")
+
+
+# def test_zero_coordinates_filtered():
+#     """Test that zero coordinates are properly filtered"""
+#     nmea_data = (
+#         "$GPRMC,123519,A,0000.000,N,00000.000,E,022.4,084.4,230394,003.1,W*47\r\n"
+#         "$GPGLL,4807.038,N,01131.000,E,123520,A*7D\r\n"
+#     ).encode()
+    
+#     serial = MockSerial(nmea_data)
+#     reader = GPSReader(serial)
+#     gps_data = reader.read_and_parse()
+    
+#     print("Test 4: Zero coordinates from RMC")
+#     print(f"  is_valid() should be False: {gps_data.is_valid()}")
+#     assert gps_data.is_valid() == False
+#     print("  ✓ PASSED\n")
+
+
+# def test_gsv_parsing():
+#     """Test GSV satellite parsing"""
+#     nmea_data = (
+#         "$GPGSV,3,1,11,03,03,111,00,04,15,270,00,06,01,010,00,13,06,292,00*74\r\n"
+#         "$GPGSV,3,2,11,14,25,170,00,16,57,208,39,18,67,296,40,19,40,246,00*74\r\n"
+#         "$GPGSV,3,3,11,22,42,067,42,24,14,311,43,27,05,244,00*4D\r\n"
+#     ).encode()
+    
+#     serial = MockSerial(nmea_data)
+#     reader = GPSReader(serial)
+#     gps_data = reader.read_and_parse()
+    
+#     print("Test 5: GSV satellite data parsing")
+#     print(f"  Satellites in view: {gps_data.satellites_in_view}")
+#     print(f"  Number of satellite records: {len(gps_data.satellite_info)}")
+#     assert gps_data.satellites_in_view == 11
+#     assert len(gps_data.satellite_info) > 0
+#     print("  ✓ PASSED\n")
+
+
+# if __name__ == "__main__":
+#     print("Running GPS Redundancy Tests\n" + "="*40 + "\n")
+    
+#     test_valid_rmc_overrides_gll()
+#     test_invalid_rmc_uses_gll()
+#     test_gga_without_position_uses_gll()
+#     test_zero_coordinates_filtered()
+#     test_gsv_parsing()
+    
+#     print("All tests passed! ✓")
 
 
 
